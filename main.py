@@ -9,29 +9,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from func import *
+from params import *
 #+begin_src python :session mempy :results output
 #+end_src
 #+begin_src python :session mempy :results output
 #################################################################
 # Lets start playing around
 # R0>RI>R1
-F_inp = 0.3
-t_R0=np.arange(0.8, 2.0, 0.01)
-t_RI=np.arange(0.02, 0.79, 0.01)
-t_R1=np.arange(0.002, 0.019, 0.01)
-for R0 in t_R0:
-   for RI in t_RI:
-      for R1 in t_R1:
-        print("Checking for R0=", R0, ", RI=", RI, ", R1=", R1)
-        ft, fb =  force_all(R0, RI, R1, Np=4096)
-        V1, V2, V3 =  Volume(R0, RI, R1, Np=4096)
-        Vol = V1+V2+V3
-        cdt1 = abs(ft - F_inp) < 0.05;
-        cdt2 = abs(fb - F_inp) < 0.05;
-        cdt3 = abs(Vol - VolT) < 0.1;
-        if(cdt1 and cdt2 and cdt3): print(R0, RI, R1)
-        if(cdt1 and cdt2): print("1 and 2", ft, fb, Vol, R0, RI, R1)
-        if(cdt2 and cdt3): print("2 and 3", ft, fb, Vol, R0, RI, R1)
-        if(cdt1 and cdt3): print("1 and 3", ft, fb, Vol, R0, RI, R1)
+t_R0=np.arange(1, 1.05, 0.01)
+t_R1=np.arange(1e-4, 0.02, 1e-3)
+# FF=np.linspace(1,30,30)*1e-2
+FF=np.linspace(1,10,2)*1e-2
+delta=np.zeros(FF.shape[0])
+R0=np.zeros(FF.shape[0])
+RI=np.zeros(FF.shape[0])
+R1=np.zeros(FF.shape[0])
+for i,F_inp in enumerate(FF):
+   R0[i], RI[i], R1[i], delta[i] = force_dist(F_inp,t_R0,t_R1)
+   t_R0=np.arange(R0[i],R0[i]+0.05,0.01)
+   t_R1=np.arange(R1[i], R1[i]+0.02, 1e-3)
+dd=np.vstack([delta,FF,R0,RI,R1])
+np.savetxt("data/sigma0o1_k0o1.txt",dd)
 #+end_src
 #+RESULTS:

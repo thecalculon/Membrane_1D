@@ -1,8 +1,6 @@
 # Make the membrane.
 import numpy as np
-#################################################################
-sigma_0 = 1e-4; KA = 0.1; theta = 0.31;
-Rv = 1.0; Av = 4*np.pi*Rv*Rv; VolT = 4./3.*np.pi* Rv*Rv*Rv
+from params import *
 #################################################################
 def make_membrane(Np=128, radius=1.0):
     dx = 2*np.pi/(Np)
@@ -27,9 +25,9 @@ def a3b3(R0, RI, R1):
 #--------------------------------------------------------------#
 def __u(A, B, r):
     if(r<1e-5):
-       print("Exception raise: r=0")
+        print("Exception raise: r=0")
     else:
-       u = A*r + B/r
+        u = A*r + B/r
     return u
 #--------------------------------------------------------------#
 #+end_src
@@ -106,6 +104,7 @@ def force_all(R0, RI, R1, Np=128):
 #+begin_src python :session mempy :results output
 #--------------------------------------------------------------#
 def delta(R0, RI, R1, Np=128):
+    dr = (R0 - RI)/Np
     A1, B1 = a1b1(R0, RI, R1)
     A3, B3 = a3b3(R0, RI, R1)
     t1, t2 = 0.0, 0.0;
@@ -122,5 +121,63 @@ def delta(R0, RI, R1, Np=128):
         denom=1-u3*u3
         if (denom > 1e-12):
             t2+=u3*dr/np.sqrt(denom)
-    delta=2*Rv - t1 + t2 - R1/np.tan(theta)
+    delta=2*Rv - (t1 + t2 - R1/np.tan(theta))
     return delta
+#--------------------------------------------------------------#
+def getRI(R0,R1):
+    num=R0*R0*R1*np.cos(theta)+R0*R1*R1
+    denom=R0+R1*np.cos(theta)
+    RI = np.sqrt(num/denom)
+    return RI
+#--------------------------------------------------------------#
+def getzz(rr,z0,A,B):
+    t1=z0
+    dr=rr[1]-rr[0]
+    zz=np.zeros(rr.shape[0])
+    for ip,r in enumerate(rr):
+        u=__u(A,B,r)
+        t1+=u*dr/np.sqrt(1-u*u)
+        zz[ip]=t1
+    return zz
+#--------------------------------------------------------------#
+def membrane(R0,RI,R1,Np=128):
+    zz=np.zeros(Np*8)
+    rr=np.zeros(Np*8)
+    A1,B1=a1b1(R0, RI, R1)
+    A2,B2=A1,B1
+    A3,B3=a3b3(R0, RI, R1)
+    A3,B3=-A3,-B3
+    ##
+    dr=(RI-0)/Np
+    rr[0:Np]=np.arange(0,RI,dr)
+    zz[0:Np]=0
+    ##
+    dr=(R0-RI)/Np
+    rr[Np:2*Np]=np.arange(RI,R0,dr)
+    zz[Np:2*Np]=getzz(rr[Np:2*Np],zz[Np-1],A1,B1)
+    ##
+    rr[2*Np:3*Np]=rr[2*Np-1:Np-1:-1]
+    zz[2*Np:3*Np]=2*zz[2*Np-1]-zz[2*Np-1:Np-1:-1]
+    ##
+    dr=(RI-R1)/Np
+    rr[3*Np:4*Np]=np.arange(RI,R1,-dr)
+    zz[3*Np:4*Np]=getzz(rr[3*Np:4*Np],zz[3*Np-1],A3,B3)
+    ##
+    rr[4*Np:]=-rr[4*Np-1::-1]
+    zz[4*Np:]=zz[4*Np-1::-1]
+    ##
+    return rr,zz
+#--------------------------------------------------------------#
+def force_dist(F_inp,t_R0,t_R1):
+    for R0 in t_R0:
+        for R1 in t_R1:
+            RI=getRI(R0,R1)
+            ft, fb =  force_all(R0, RI, R1, Np=4096)
+            V1, V2, V3 =  Volume(R0, RI, R1, Np=4096)
+            Vol = V1+V2+V3
+            cdt1 = abs(ft - F_inp) < 0.02*F_inp;
+            cdt3 = abs(Vol - VolT) < 0.03*VolT;
+            if(cdt1 and cdt3):
+                print("ft=", ft, "Vol=", Vol, "R0=", R0, "RI=", RI, "R1=", R1)
+                return R0, RI, R1, delta(R0, RI, R1)
+#--------------------------------------------------------------#
