@@ -93,12 +93,15 @@ def Volume(R0, RI, R1, Np=4096):
 def force_all(R0, RI, R1, Np=128):
     At, Ab = Area(R0, RI, R1, Np=128)
     Aind = At + Ab
-    A1, B1 = a1b1(R0, RI, R1)
+    # print((Aind-Av)/Av)
+    # A1, B1 = a1b1(R0, RI, R1)
     A3, B3 = a3b3(R0, RI, R1)
     t1 = 2*np.pi*(R1*np.sin(0.5*np.pi - theta) + R1*R1*A3)
     t2 = sigma_0 + KA*(Aind - Av)/Av
     ft = t1*t2
-    fb = t2*2*np.pi*RI*RI*A1
+    fb = ft
+    # print(t1,t2)
+    # fb = t2*2*np.pi*RI*RI*A1
     return ft, fb
 #+end_src
 #+begin_src python :session mempy :results output
@@ -172,12 +175,14 @@ def force_dist(F_inp,t_R0,t_R1):
     for R0 in t_R0:
         for R1 in t_R1:
             RI=getRI(R0,R1)
-            ft, fb =  force_all(R0, RI, R1, Np=4096)
+            ft, fb = force_all(R0, RI, R1, Np=4096)
             V1, V2, V3 =  Volume(R0, RI, R1, Np=4096)
             Vol = V1+V2+V3
-            cdt1 = abs(ft - F_inp) < 0.02*F_inp;
-            cdt3 = abs(Vol - VolT) < 0.03*VolT;
+            # print(ft, fb)
+            print(R0,R1,(ft-F_inp)/F_inp, (Vol - VolT)/VolT)
+            cdt1 = abs(ft - F_inp) < 0.05*F_inp;
+            cdt3 = abs(Vol - VolT) < 0.05*VolT;
             if(cdt1 and cdt3):
                 print("ft=", ft, "Vol=", Vol, "R0=", R0, "RI=", RI, "R1=", R1)
-                return R0, RI, R1, delta(R0, RI, R1)
+                return R0, RI, R1, delta(R0, RI, R1), ft
 #--------------------------------------------------------------#
