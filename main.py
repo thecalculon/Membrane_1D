@@ -39,9 +39,9 @@ from params import *
 #+end_src
 #+RESULTS:
 #################################################################
-Np=50
-t_R1=np.linspace(0.018,0.2,Np)
-t_R0=np.arange(0.8,1.10,0.001)
+Np=200
+t_R1=np.linspace(0.00018,0.2,Np)
+t_R0=np.arange(0.8,1.20,0.0001)
 t_delta=np.zeros(Np)
 t_FF=np.zeros(Np)
 for i,R1 in enumerate(t_R1):
@@ -56,7 +56,15 @@ for i,R1 in enumerate(t_R1):
    t_FF[i]=force_all(R0, RI, R1)[0]/(sigma_0*Rv)
    t_R0=np.arange(R0,R0+0.01,0.001)
    print(t_delta[i],t_FF[i],R0)
+
+expt_data = np.loadtxt("./Ref_data/wt_expt_our.dat")
+radius_ev = 5.1e-8
+
 np.savetxt("FF.txt",t_FF)
 np.savetxt("delta.txt",t_delta)
-plt.plot(t_delta,t_FF,'o-')
+fig, ax = plt.subplots()
+ax.plot(t_delta,t_FF,'-s', markerfacecolor="none", label="Theory")
+ax.plot(expt_data[:,0]/radius_ev,-0.02+expt_data[:,1]/1e-9,'-.k', label="Expt")
+ax.set(xlim=[-0.1,2.0], ylim=[-0.01,1.0], xlabel=r"$\delta/R_v$", ylabel="F/nN")
+ax.legend()
 plt.show()
