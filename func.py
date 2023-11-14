@@ -130,6 +130,7 @@ def getRI(R0,R1):
     RI = np.sqrt(num/denom)
     return RI
 #--------------------------------------------------------------#
+
 def getzz(rr,z0,A,B):
     t1=z0
     dr=rr[1]-rr[0]
@@ -180,4 +181,16 @@ def force_dist(F_inp,t_R0,t_R1):
             if(cdt1 and cdt3):
                 print("ft=", ft, "Vol=", Vol, "R0=", R0, "RI=", RI, "R1=", R1)
                 return R0, RI, R1, delta(R0, RI, R1)
+#--------------------------------------------------------------#
+
+#--------------------------------------------------------------#
+def get_R1(R0, RI, theta):
+    sth = np.sin(0.5*np.pi - theta)
+    a_ = 1.0e0;
+    b_ = (R0*R0 - RI*RI)*sth/R0
+    c_ = -RI*RI
+    sqterm = b_*b_ - 4*a_*c_
+    sol1 = 0.5*(-b_ + np.sqrt(sqterm))
+    return sol1
+ 
 #--------------------------------------------------------------#
