@@ -29,13 +29,13 @@ def membrane2(R0,RI,R1,Np=128):
     ##
     return rr,zz
 #--------------------------------------------------------------#
-dd=np.loadtxt("data/sigma0o001_k1.txt")
-rr,zz=membrane(dd[2,9],dd[3,9],dd[4,9])
+# dd=np.loadtxt("data/sigma0o001_k1.txt")
+rr,zz=membrane(1.036299999999996,0.21794668753986904,0.04797983838383839)
 # lambd=0.2
 # R0=1
 # rr,zz=membrane(R0,lambd,0)
 Np=int(zz.shape[0]/8)
 fig, ax = plt.subplots(1, 1)
-plt.plot(rr[0:],zz[0:],'o')
+plt.plot(rr[0:],zz[0:],'-')
 ax.set_aspect('equal')
 plt.show()

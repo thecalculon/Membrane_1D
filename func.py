@@ -1,6 +1,5 @@
 # Make the membrane.
-import numpy as np
-from params import *
+from header import *
 #################################################################
 def make_membrane(Np=128, radius=1.0):
     dx = 2*np.pi/(Np)
@@ -90,19 +89,16 @@ def Volume(R0, RI, R1, Np=4096):
 #+begin_src python :session mempy :results output
 # here is the function for force balance
 #--------------------------------------------------------------#
-def force_all(R0, RI, R1, Np=128):
-    At, Ab = Area(R0, RI, R1, Np=128)
-    Aind = At + Ab
-    # print((Aind-Av)/Av)
-    # A1, B1 = a1b1(R0, RI, R1)
-    A3, B3 = a3b3(R0, RI, R1)
-    t1 = 2*np.pi*(R1*np.sin(0.5*np.pi - theta) + R1*R1*A3)
-    t2 = sigma_0 + KA*(Aind - Av)/Av
-    ft = t1*t2
-    fb = ft
-    # print(t1,t2)
-    # fb = t2*2*np.pi*RI*RI*A1
-    return ft, fb
+def force(R0, RI, R1, kasigma, Np=128, Aind=None):
+   if Aind is None:
+      At, Ab = Area(R0, RI, R1, Np=128)
+      Aind = At + Ab
+   A3, B3 = a3b3(R0, RI, R1)
+   t1 = 2*np.pi*(R1*np.sin(0.5*np.pi - theta) + R1*R1*A3)
+   t2 = kasigma[1]+kasigma[0]*(Aind - Av)/Av
+   ft = t1*t2
+   fb = ft
+   return ft, fb
 #+end_src
 #+begin_src python :session mempy :results output
 #--------------------------------------------------------------#
@@ -116,7 +112,7 @@ def delta(R0, RI, R1, Np=128):
         u1 = __u(A1, B1, r)
         denom = 1-u1*u1
         if (denom > 1e-12):
-            t1+=2*u1*dr/np.sqrt(denom)
+            t1+=u1*dr/np.sqrt(denom)
     #
     rr = np.arange(R1+dr/2, RI+dr/2, dr)
     for r in rr:
@@ -124,7 +120,8 @@ def delta(R0, RI, R1, Np=128):
         denom=1-u3*u3
         if (denom > 1e-12):
             t2+=u3*dr/np.sqrt(denom)
-    delta=2*Rv - (t1 + t2 - R1/np.tan(theta))
+    delta= 2*Rv - (2*t1 + t2 - R1/np.tan(theta))
+    # delta=2*Rv - (t1 - t2)
     return delta
 #--------------------------------------------------------------#
 def getRI(R0,R1):
@@ -133,7 +130,6 @@ def getRI(R0,R1):
     RI = np.sqrt(num/denom)
     return RI
 #--------------------------------------------------------------#
-
 def getzz(rr,z0,A,B):
     t1=z0
     dr=rr[1]-rr[0]
@@ -172,11 +168,11 @@ def membrane(R0,RI,R1,Np=128):
     ##
     return rr,zz
 #--------------------------------------------------------------#
-def force_dist(F_inp,t_R0,t_R1):
+def delta4force(F_inp,kasigma,t_R0,t_R1):
     for R0 in t_R0:
         for R1 in t_R1:
             RI=getRI(R0,R1)
-            ft, fb = force_all(R0, RI, R1, Np=4096)
+            ft, fb = force(R0, RI, R1, kasigma, Np=4096)
             V1, V2, V3 =  Volume(R0, RI, R1, Np=4096)
             Vol = V1+V2+V3
             # print(ft, fb)
@@ -187,14 +183,40 @@ def force_dist(F_inp,t_R0,t_R1):
                 print("ft=", ft, "Vol=", Vol, "R0=", R0, "RI=", RI, "R1=", R1)
                 return R0, RI, R1, delta(R0, RI, R1)
 #--------------------------------------------------------------#
-
+def forcedistcurve(kasigma,delta_max=None,Np=100,verbose=True):
+    t_R1=np.linspace(1e-6,5e-2,Np)
+    t_R0=np.arange(1,1.02,0.0001)
+    t_delta=np.empty(Np,dtype=object)
+    t_FF=np.empty(Np,dtype=object)
+    i=0
+    for R1 in t_R1:
+        for R0 in t_R0:
+            RI=getRI(R0,R1)
+            V1, V2, V3 = Volume(R0, RI, R1, Np=4096)
+            Vol = V1+V2+V3
+            At, Ab=Area(R0, RI, R1)
+            cdt4 = At+Ab>Av
+            cdt3 = abs(Vol - VolT) < (1e-3)*VolT;
+            if cdt3 and cdt4:
+                t_delta[i]=delta(R0,RI,R1)
+                t_FF[i]=force(R0, RI, R1, kasigma, Aind=At+Ab)[0]
+                i=i+1
+                break;
+        if verbose:
+            print(t_delta[i-1]-t_delta[0],t_FF[i-1],R0,RI,R1)
+        if(delta_max is not None and t_delta[i-1]-t_delta[0]>delta_max):
+            break;
+        t_R0=np.arange(R0,R0+0.001,0.0001)
+    t_delta[0:i]=t_delta[0:i]-t_delta[0]
+    return t_delta[0:i],t_FF[0:i]
 #--------------------------------------------------------------#
-def get_R1(R0, RI, theta):
-    sth = np.sin(0.5*np.pi - theta)
-    a_ = 1.0e0;
-    b_ = (R0*R0 - RI*RI)*sth/R0
-    c_ = -RI*RI
-    sqterm = b_*b_ - 4*a_*c_
-    sol1 = 0.5*(-b_ + np.sqrt(sqterm))
-    return sol1
- 
+def cost_func(kasigma,expt_data,Np=100):
+    kasigma=kasigma.T
+    print(kasigma)
+    t_delta,t_FF=forcedistcurve(kasigma,np.max(expt_data[:,0]),Np,False)
+    t_delta=t_delta-t_delta[0]
+    area1=np.trapz(t_FF,t_delta)
+    area2=np.trapz(expt_data[:,1],expt_data[:,0])
+    print("cost=",np.abs(area2-area1))
+    return np.abs(area2-area1)/(kasigma[0]*Rv*Rv)
+#--------------------------------------------------------------#
