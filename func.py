@@ -29,10 +29,6 @@ def __u(A, B, r):
         u = A*r + B/r
     return u
 #--------------------------------------------------------------#
-#+end_src
-#+begin_src python :session mempy :results output
-# Here are the functions for estimation of area
-#--------------------------------------------------------------#
 def Area(R0, RI, R1, Np=8192):
     dr = (R0 - RI)/Np
     rr = np.arange(RI+dr/2, R0+dr/2, dr)
@@ -83,11 +79,7 @@ def Volume(R0, RI, R1, Np=4096):
            t1 = u3*r*r*dr/np.sqrt(den2);
            vol2 += np.pi*t1
     vol3 = - np.pi*R1*R1*R1/(3*np.tan(theta))
-    # vol = vol1 + vol2 + vol3 # - np.pi*R1*R1*R1/(3*np.tan(theta))
     return vol1, vol2, vol3
-#+end_src
-#+begin_src python :session mempy :results output
-# here is the function for force balance
 #--------------------------------------------------------------#
 def force(R0, RI, R1, kasigma, Np=128, Aind=None):
    if Aind is None:
@@ -99,8 +91,6 @@ def force(R0, RI, R1, kasigma, Np=128, Aind=None):
    ft = t1*t2
    fb = ft
    return ft, fb
-#+end_src
-#+begin_src python :session mempy :results output
 #--------------------------------------------------------------#
 def delta(R0, RI, R1, Np=128):
     dr = (R0 - RI)/Np
@@ -121,7 +111,6 @@ def delta(R0, RI, R1, Np=128):
         if (denom > 1e-12):
             t2+=u3*dr/np.sqrt(denom)
     delta= 2*Rv - (2*t1 + t2 - R1/np.tan(theta))
-    # delta=2*Rv - (t1 - t2)
     return delta
 #--------------------------------------------------------------#
 def getRI(R0,R1):
@@ -189,6 +178,8 @@ def forcedistcurve(kasigma,delta_max=None,Np=100,verbose=True):
     t_delta=np.empty(Np,dtype=object)
     t_FF=np.empty(Np,dtype=object)
     i=0
+    t_R0_fin=np.zeros(Np)
+    t_RI=np.zeros(Np)
     for R1 in t_R1:
         for R0 in t_R0:
             RI=getRI(R0,R1)
@@ -200,15 +191,17 @@ def forcedistcurve(kasigma,delta_max=None,Np=100,verbose=True):
             if cdt3 and cdt4:
                 t_delta[i]=delta(R0,RI,R1)
                 t_FF[i]=force(R0, RI, R1, kasigma, Aind=At+Ab)[0]
+                t_R0_fin[i]=R0
+                t_RI[i]=RI
                 i=i+1
                 break;
         if verbose:
-            print(t_delta[i-1]-t_delta[0],t_FF[i-1],R0,RI,R1)
+            print(t_delta[i-1],t_FF[i-1],R0,RI,R1)
         if(delta_max is not None and t_delta[i-1]-t_delta[0]>delta_max):
             break;
         t_R0=np.arange(R0,R0+0.001,0.0001)
     t_delta[0:i]=t_delta[0:i]-t_delta[0]
-    return t_delta[0:i],t_FF[0:i]
+    return t_delta[0:i],t_FF[0:i],t_R0_fin[0:i],t_RI[0:i],t_R1[0:i]
 #--------------------------------------------------------------#
 def cost_func(kasigma,expt_data,Np=100):
     kasigma=kasigma.T
@@ -218,5 +211,6 @@ def cost_func(kasigma,expt_data,Np=100):
     area1=np.trapz(t_FF,t_delta)
     area2=np.trapz(expt_data[:,1],expt_data[:,0])
     print("cost=",np.abs(area2-area1))
-    return np.abs(area2-area1)/(kasigma[0]*Rv*Rv)
+    cost=np.abs(area2-area1)/(kasigma[0]*Rv*Rv)
+    return cost
 #--------------------------------------------------------------#
