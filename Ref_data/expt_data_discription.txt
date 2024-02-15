@@ -1,2 +1,0 @@
-Radius = 51 nano Meter
-Force for indentation = 0.6 nano Newton
