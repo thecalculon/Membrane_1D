@@ -1,41 +1,27 @@
-from func import *
+import sys
+from Membrane_1D import *
 import matplotlib.pyplot as plt
 #--------------------------------------------------------------#
-def membrane2(R0,RI,R1,Np=128):
-    zz=np.zeros(Np*8)
-    rr=np.zeros(Np*8)
-    A1,B1=a1b1(R0, RI, R1)
-    A2,B2=A1,B1
-    A3,B3=a3b3(R0, RI, R1)
-    A3,B3=-A3,-B3
-    ##
-    dr=(RI-0)/Np
-    rr[0:Np]=np.arange(0,RI,dr)
-    zz[0:Np]=0
-    ##
-    dr=(R0-RI)/Np
-    rr[Np:2*Np]=np.arange(RI,R0,dr)
-    zz[Np:2*Np]=getzz(rr[Np:2*Np],zz[Np-1],A1,B1)
-    ##
-    rr[2*Np:3*Np]=rr[2*Np-1:Np-1:-1]
-    zz[2*Np:3*Np]=2*zz[2*Np-1]-zz[2*Np-1:Np-1:-1]
-    ##
-    dr=(RI-R1)/Np
-    rr[3*Np:4*Np]=np.arange(RI,R1,-dr)
-    zz[3*Np:4*Np]=getzz(rr[3*Np:4*Np],zz[3*Np-1],A3,B3)
-    ##
-    rr[4*Np:]=-rr[4*Np-1::-1]
-    zz[4*Np:]=zz[4*Np-1::-1]
-    ##
-    return rr,zz
+def plot_mem(ax,fname,point):
+    Np=4096
+    dd=np.loadtxt(fname)
+    rr,zz,rrtip,zztip=membrane(dd[point,2],dd[point,3],dd[point,4],Np=Np)
+    print((dd[point,0]-dd[0,0])*radius_ev*nano,
+        (dd[point,1]-dd[0,1])*radius_ev*pico)
+    plt.plot(rr[0:],zz[0:],'k-',linewidth=1.0)
+    plt.plot(-rr[4*Np-1::-1],zz[4*Np-1::-1],'k-',linewidth=1.0)
+    plt.plot(rrtip,zztip,'r-',linewidth=1.0)
+    plt.plot(-rrtip[-1::-1],zztip[-1::-1],'r-',linewidth=1.0)
+    ax.set_aspect('equal')
+    ax.spines[['right','top','left','bottom']].set_visible(False)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
 #--------------------------------------------------------------#
-# dd=np.loadtxt("data/sigma0o001_k1.txt")
-rr,zz=membrane(1.036299999999996,0.21794668753986904,0.04797983838383839)
-# lambd=0.2
-# R0=1
-# rr,zz=membrane(R0,lambd,0)
-Np=int(zz.shape[0]/8)
-fig, ax = plt.subplots(1, 1)
-plt.plot(rr[0:],zz[0:],'-')
-ax.set_aspect('equal')
+fname=sys.argv[1]
+#--------------------------------------------------------------#
+fig,ax=plt.subplots(1,1)
+plot_mem(ax,fname+".txt",1)
+plot_mem(ax,fname+".txt",25)
+plot_mem(ax,fname+".txt",80)
+# plt.savefig("../figures/"+fname.replace("data","")+"_geomtry.pdf")
 plt.show()
